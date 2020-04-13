@@ -284,7 +284,22 @@ function! echodoc#util#completion_signature(completion, maxlen, filetype) abort
     endif
   endif
   if get(item, 'info', '') =~# '^.\+('
-    call add(abbrs, matchstr(item.info, '^\_s*\zs.*'))
+    " If info contains a table in multiple lines, convert it into a dict
+    let info_dict = {}
+    for line in split(item.info, '\n')
+        let t = matchlist(line, '^\(\i*\)\s*\zs.*')
+        let k = t[1]
+        let v = t[0]
+        let info_dict[k] = v
+    endfor
+    " Construct the function signature from multiple rows in the table or from single
+    " line info
+    let info_str = matchstr(item.info, '^\_s*\zs.*')
+    if has_key(info_dict, 'name') && has_key(info_dict, 'signature') && has_key(info_dict, 'typeref')
+        let typeref = substitute(info_dict.typeref, 'typename:', '', '')
+        let info_str = join([typeref, info_dict.name, info_dict.signature], ' ')
+    endif
+    call add(abbrs, info_str)
   endif
   if get(item, 'abbr', '') =~# '^.\+('
     call add(abbrs, item.abbr)
